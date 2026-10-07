@@ -8,7 +8,7 @@ public class AccuracyStopRule implements ModelRule {
     @Override
     public void check(ModelStatus currentStatus, ModelStatus targetStatus, double accuracy) {
         if (targetStatus == ModelStatus.PRODUCTION && accuracy < minAccuracy) {
-            throw new IllegalArgumentException(
+            throw new IllegalStateException(
                     "Model accuracy (" + accuracy + ") is below required threshold (" + minAccuracy + ") for PRODUCTION!"
             );
         }
