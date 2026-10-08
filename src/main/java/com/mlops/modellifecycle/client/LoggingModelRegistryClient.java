@@ -12,7 +12,6 @@ public class LoggingModelRegistryClient implements ModelRegistryPort {
 
     @Override
     public void publish(ModelId id) {
-        // Real HTTP call comes in a later lab. For now we only log.
         log.info("Publishing model {} to registry", id.getValue());
     }
 }
