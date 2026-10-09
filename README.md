@@ -29,3 +29,12 @@ Spring Boot integration for ML Model Lifecycle management using Clean Architectu
 - `MLOPS-2`: Domain Core implementation (`ModelId`, `ModelStatus`)
 - `MLOPS-3`: Domain Rules & Policy (`ModelRule`, `TransitionRule`, `AccuracyStopRule`, `ModelPolicy`)
 - `MLOPS-4`: Spring Boot Beans configuration & `ModelService`
+
+## Status Table (tested)
+
+| From | To | Accuracy | Result |
+| --- | --- | --- | --- |
+| DRAFT | EVALUATED | 0.90 | allowed |
+| EVALUATED | PRODUCTION | 0.90 | allowed |
+| DRAFT | PRODUCTION | 0.90 | IllegalStateException |
+| EVALUATED | PRODUCTION | 0.50 | IllegalStateException |
