@@ -17,6 +17,10 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.mlops.modellifecycle.domain.ModelItem;
+import com.mlops.modellifecycle.domain.ModelNotFound;
+import com.mlops.modellifecycle.domain.ModelStatus;
+
 @SpringBootTest
 class ModelRegistrationServiceTest {
 
@@ -53,5 +57,23 @@ class ModelRegistrationServiceTest {
                 () -> service.register(ModelId.newId(), key, "Churn again"));
 
         assertEquals(1, models.count(key));
+    }
+
+    @Test
+    void getReturnsRegisteredModel() {
+        ModelId id = ModelId.newId();
+        ModelKey key = new ModelKey("ML-21");
+        service.register(id, key, "Churn model");
+
+        ModelItem item = service.get(id);
+
+        assertEquals(id, item.id());
+        assertEquals(key, item.key());
+        assertEquals(ModelStatus.DRAFT, item.status());
+    }
+
+    @Test
+    void getMissingThrowsModelNotFound() {
+        assertThrows(ModelNotFound.class, () -> service.get(ModelId.newId()));
     }
 }

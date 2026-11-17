@@ -17,6 +17,7 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.mlops.modellifecycle.domain.ModelItem;
 
 @SpringBootTest
 class ModelJdbcTest {
@@ -72,5 +73,25 @@ class ModelJdbcTest {
     @Test
     void unknownStatusTextThrows() {
         assertThrows(IllegalStateException.class, () -> ModelJdbc.toStatus("BOGUS"));
+    }
+
+
+    @Test
+    void findByIdReturnsStoredItem() {
+        ModelId id = ModelId.newId();
+        ModelKey key = new ModelKey("ML-20");
+        models.insert(id, key, ModelStatus.DRAFT, "Fraud model");
+
+        ModelItem item = models.findById(id).orElseThrow();
+
+        assertEquals(id, item.id());
+        assertEquals(key, item.key());
+        assertEquals(ModelStatus.DRAFT, item.status());
+        assertEquals("Fraud model", item.name());
+    }
+
+    @Test
+    void findByIdOfMissingIdIsEmpty() {
+        assertTrue(models.findById(ModelId.newId()).isEmpty());
     }
 }

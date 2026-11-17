@@ -8,6 +8,8 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import com.mlops.modellifecycle.domain.ModelItem;
+import java.util.UUID;
 
 @Repository
 public class ModelJdbc {
@@ -38,6 +40,18 @@ public class ModelJdbc {
                 String.class,
                 key.getValue());
         return rows.stream().findFirst().map(ModelJdbc::toStatus);
+    }
+
+    public Optional<ModelItem> findById(ModelId id) {
+        List<ModelItem> rows = jdbc.query(
+                "SELECT id, business_key, status, name FROM ml_model WHERE id = ?",
+                (rs, rowNum) -> new ModelItem(
+                        new ModelId(rs.getObject("id", UUID.class)),
+                        new ModelKey(rs.getString("business_key")),
+                        toStatus(rs.getString("status")),
+                        rs.getString("name")),
+                id.getValue());
+        return rows.stream().findFirst();
     }
 
     static ModelStatus toStatus(String text) {
