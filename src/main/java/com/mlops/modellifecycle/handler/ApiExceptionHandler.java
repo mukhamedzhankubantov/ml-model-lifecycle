@@ -22,7 +22,6 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class ApiExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
-    static final String CORRELATION_HEADER = "X-Correlation-Id";
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> validation(MethodArgumentNotValidException ex, HttpServletRequest request) {
@@ -80,7 +79,6 @@ public class ApiExceptionHandler {
     }
 
     private String correlationId(HttpServletRequest request) {
-        String header = request.getHeader(CORRELATION_HEADER);
-        return (header == null || header.isBlank()) ? UUID.randomUUID().toString() : header.trim();
+        return CorrelationIds.resolve(request);
     }
 }

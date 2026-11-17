@@ -26,3 +26,8 @@ management:
 info:
   app:
     name: ML Model Lifecycle
+
+app:
+  jwt:
+    issuer: ml-model-lifecycle
+    ttl: 15m

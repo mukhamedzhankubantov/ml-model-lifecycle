@@ -8,3 +8,5 @@ app:
   downstream:
     base-url: ${CSS_DOWNSTREAM_URL}
     timeout: 5s
+  jwt:
+    secret: ${CSS_JWT_SECRET}

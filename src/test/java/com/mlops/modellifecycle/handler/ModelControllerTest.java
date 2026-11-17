@@ -6,13 +6,19 @@ import com.mlops.modellifecycle.domain.ModelItem;
 import com.mlops.modellifecycle.domain.ModelKey;
 import com.mlops.modellifecycle.domain.ModelNotFound;
 import com.mlops.modellifecycle.domain.ModelStatus;
+import com.mlops.modellifecycle.security.Roles;
+import com.mlops.modellifecycle.security.SecurityConfig;
 import com.mlops.modellifecycle.service.ModelRegistrationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.util.UUID;
 
@@ -22,6 +28,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -29,6 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ModelController.class)
+@Import(SecurityConfig.class)
 class ModelControllerTest {
 
     private static final String BASE = "/api/v1/models";
@@ -39,6 +47,24 @@ class ModelControllerTest {
     @MockitoBean
     ModelRegistrationService service;
 
+    @MockitoBean
+    JwtDecoder jwtDecoder;
+
+    private static RequestPostProcessor scientist() {
+        return jwt().jwt(j -> j.subject("scientist"))
+                .authorities(new SimpleGrantedAuthority("ROLE_" + Roles.SCIENTIST));
+    }
+
+    @Test
+    void noTokenReturns401AndServiceIsNotCalled() throws Exception {
+        mvc.perform(get(BASE + "/" + UUID.randomUUID()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
+                .andExpect(jsonPath("$.message").value("valid token required"));
+
+        verifyNoInteractions(service);
+    }
+
     @Test
     void validBodyReturns201WithLocation() throws Exception {
         UUID uuid = UUID.randomUUID();
@@ -47,6 +73,7 @@ class ModelControllerTest {
                         ModelStatus.DRAFT, "Churn model"));
 
         mvc.perform(post(BASE)
+                        .with(scientist())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"businessKey\":\"ML-17\",\"name\":\"Churn model\"}"))
                 .andExpect(status().isCreated())
@@ -60,6 +87,7 @@ class ModelControllerTest {
     @Test
     void blankNameReturns400AndServiceIsNotCalled() throws Exception {
         mvc.perform(post(BASE)
+                        .with(scientist())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"businessKey\":\"ML-17\",\"name\":\"   \"}"))
                 .andExpect(status().isBadRequest())
@@ -74,7 +102,7 @@ class ModelControllerTest {
         UUID uuid = UUID.randomUUID();
         when(service.get(any(ModelId.class))).thenThrow(new ModelNotFound(new ModelId(uuid)));
 
-        mvc.perform(get(BASE + "/" + uuid))
+        mvc.perform(get(BASE + "/" + uuid).with(scientist()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("NOT_FOUND"));
     }
@@ -85,6 +113,7 @@ class ModelControllerTest {
                 .thenThrow(new DuplicateModel("ML-17"));
 
         mvc.perform(post(BASE)
+                        .with(scientist())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"businessKey\":\"ML-17\",\"name\":\"Churn again\"}"))
                 .andExpect(status().isConflict())
@@ -93,7 +122,7 @@ class ModelControllerTest {
 
     @Test
     void businessKeyInPathReturns400() throws Exception {
-        mvc.perform(get(BASE + "/ML-17"))
+        mvc.perform(get(BASE + "/ML-17").with(scientist()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION"))
                 .andExpect(jsonPath("$.message").value("id must be a UUID"));
@@ -104,6 +133,7 @@ class ModelControllerTest {
     @Test
     void correlationIdFromRequestComesBackOn400() throws Exception {
         mvc.perform(post(BASE)
+                        .with(scientist())
                         .header("X-Correlation-Id", "abc-123")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"businessKey\":\"ML-17\",\"name\":\"\"}"))
