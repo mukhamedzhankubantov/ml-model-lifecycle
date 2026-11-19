@@ -4,6 +4,7 @@ import com.mlops.modellifecycle.config.OpenApiConfig;
 import com.mlops.modellifecycle.domain.ModelId;
 import com.mlops.modellifecycle.domain.ModelItem;
 import com.mlops.modellifecycle.domain.ModelKey;
+import com.mlops.modellifecycle.service.ModelEvaluationService;
 import com.mlops.modellifecycle.service.ModelPromotionService;
 import com.mlops.modellifecycle.service.ModelRegistrationService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,10 +33,13 @@ import java.util.UUID;
 public class ModelController {
     private final ModelRegistrationService service;
     private final ModelPromotionService promotion;
+    private final ModelEvaluationService evaluation;
 
-    public ModelController(ModelRegistrationService service, ModelPromotionService promotion) {
+    public ModelController(ModelRegistrationService service, ModelPromotionService promotion,
+                           ModelEvaluationService evaluation) {
         this.service = service;
         this.promotion = promotion;
+        this.evaluation = evaluation;
     }
 
     @PostMapping
@@ -74,6 +78,21 @@ public class ModelController {
             content = @Content(schema = @Schema(implementation = ApiError.class)))
     public ModelResponse get(@PathVariable UUID id) {
         return ModelResponse.from(service.get(new ModelId(id)));
+    }
+
+    @PostMapping("/{id}/evaluate")
+    @Operation(summary = "Move a DRAFT model to EVALUATED (both roles)",
+            security = @SecurityRequirement(name = OpenApiConfig.BEARER))
+    @ApiResponse(responseCode = "200", description = "Evaluated; the body carries the new status",
+            content = @Content(schema = @Schema(implementation = ModelResponse.class)))
+    @ApiResponse(responseCode = "401", description = "UNAUTHENTICATED: no token, or the token is bad or expired",
+            content = @Content(schema = @Schema(implementation = ApiError.class)))
+    @ApiResponse(responseCode = "404", description = "NOT_FOUND: no model with this UUID",
+            content = @Content(schema = @Schema(implementation = ApiError.class)))
+    @ApiResponse(responseCode = "409", description = "POLICY_VIOLATION: only a DRAFT model can be evaluated",
+            content = @Content(schema = @Schema(implementation = ApiError.class)))
+    public ModelResponse evaluate(@PathVariable UUID id, Authentication authentication) {
+        return ModelResponse.from(evaluation.evaluate(new ModelId(id), authentication.getName()));
     }
 
     @PostMapping("/{id}/promote")

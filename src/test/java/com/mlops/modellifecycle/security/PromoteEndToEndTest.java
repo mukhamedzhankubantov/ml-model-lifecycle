@@ -78,6 +78,44 @@ class PromoteEndToEndTest {
     }
 
     @Test
+    void thePageFlowWorksWithRealTokens() throws Exception {
+        String scientist = tokenFor("scientist", "scientist-dev");
+        String lead = tokenFor("lead", "lead-dev");
+
+        // scientist registers and evaluates (allowed for both roles)
+        String created = mvc.perform(post("/api/v1/models")
+                        .header("Authorization", "Bearer " + scientist)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"businessKey\":\"ML-FLOW\",\"name\":\"Flow model\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("DRAFT"))
+                .andReturn().getResponse().getContentAsString();
+        String id = JsonPath.read(created, "$.id");
+
+        mvc.perform(post("/api/v1/models/" + id + "/evaluate").header("Authorization", "Bearer " + scientist))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("EVALUATED"));
+
+        // scientist cannot promote, the row stays EVALUATED
+        mvc.perform(post("/api/v1/models/" + id + "/promote")
+                        .header("Authorization", "Bearer " + scientist)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"accuracy\":0.91}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/models/" + id)
+                        .header("Authorization", "Bearer " + scientist))
+                .andExpect(jsonPath("$.status").value("EVALUATED"));
+
+        // lead can
+        mvc.perform(post("/api/v1/models/" + id + "/promote")
+                        .header("Authorization", "Bearer " + lead)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"accuracy\":0.91}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PRODUCTION"));
+    }
+
+    @Test
     void noTokenIs401AndRowIsUnchanged() throws Exception {
         ModelId id = insert("ML-1", ModelStatus.EVALUATED);
 

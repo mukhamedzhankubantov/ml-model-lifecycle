@@ -1,6 +1,7 @@
 package com.mlops.modellifecycle.config;
 
 import com.mlops.modellifecycle.domain.AccuracyStopRule;
+import com.mlops.modellifecycle.domain.EvaluationRule;
 import com.mlops.modellifecycle.domain.ModelPolicy;
 import com.mlops.modellifecycle.domain.TransitionRule;
 import org.springframework.context.annotation.Bean;
@@ -13,6 +14,7 @@ public class ServiceConfig {
     public ModelPolicy modelPolicy() {
         return new ModelPolicy(List.of(
                 new TransitionRule(),
+                new EvaluationRule(),
                 new AccuracyStopRule(0.80)
         ));
     }

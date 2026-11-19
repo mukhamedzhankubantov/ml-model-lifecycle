@@ -6,6 +6,7 @@ import com.mlops.modellifecycle.domain.ModelKey;
 import com.mlops.modellifecycle.domain.ModelStatus;
 import com.mlops.modellifecycle.handler.MeController;
 import com.mlops.modellifecycle.handler.ModelController;
+import com.mlops.modellifecycle.service.ModelEvaluationService;
 import com.mlops.modellifecycle.service.ModelPromotionService;
 import com.mlops.modellifecycle.service.ModelRegistrationService;
 import org.junit.jupiter.api.Test;
@@ -55,6 +56,9 @@ class SecurityRulesTest {
 
     @MockitoBean
     ModelPromotionService promotion;
+
+    @MockitoBean
+    ModelEvaluationService evaluation;
 
     @MockitoBean
     JwtDecoder jwtDecoder;
@@ -179,6 +183,25 @@ class SecurityRulesTest {
     }
 
     // ---- Both roles: create, read, me ---------------------------------------------
+
+    @Test
+    void evaluateWithNoTokenIs401AndServiceIsNotCalled() throws Exception {
+        mvc.perform(post(MODELS + "/" + UUID.randomUUID() + "/evaluate"))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(evaluation);
+    }
+
+    @Test
+    void juniorMayEvaluate() throws Exception {
+        UUID uuid = UUID.randomUUID();
+        when(evaluation.evaluate(any(ModelId.class), anyString()))
+                .thenReturn(new ModelItem(new ModelId(uuid), new ModelKey("ML-17"),
+                        ModelStatus.EVALUATED, "Churn model"));
+
+        mvc.perform(post(MODELS + "/" + uuid + "/evaluate").with(junior()))
+                .andExpect(status().isOk());
+    }
 
     @Test
     void juniorMayCreate() throws Exception {

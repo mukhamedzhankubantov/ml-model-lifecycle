@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+  <title>ML Model Lifecycle · Sign in</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <h1>ML Model Lifecycle</h1>
+      <p class="tagline">Register a model, evaluate it, and promote it to PRODUCTION. Promotion is locked to one role.</p>
+    </div>
+  </header>
+
+  <main class="wrap grid">
+
+    <section class="card" aria-labelledby="roles-h">
+      <h2 id="roles-h">Two roles</h2>
+      <dl class="roles">
+        <div>
+          <dt><span class="pill junior">DATA_SCIENTIST</span> junior</dt>
+          <dd>Register, evaluate and read models. <strong>Cannot</strong> promote: gets 403.</dd>
+        </div>
+        <div>
+          <dt><span class="pill senior">ML_LEAD</span> senior</dt>
+          <dd>Everything the junior can do, and <strong>promote</strong> a model to PRODUCTION.</dd>
+        </div>
+      </dl>
+      <div class="dev">
+        <p class="dev-title">Dev only: classroom users (the <code>dev</code> profile on this laptop)</p>
+        <table>
+          <thead><tr><th>Username</th><th>Password</th><th>Role</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><code>scientist</code></td><td><code>scientist-dev</code></td><td>DATA_SCIENTIST</td>
+                <td><button type="button" class="link" data-fill="scientist">Fill form</button></td></tr>
+            <tr><td><code>lead</code></td><td><code>lead-dev</code></td><td>ML_LEAD</td>
+                <td><button type="button" class="link" data-fill="lead">Fill form</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="session-h">
+      <h2 id="session-h">1. Session</h2>
+
+      <form id="login-form" autocomplete="on" novalidate>
+        <label for="username">Username</label>
+        <input id="username" name="username" type="text" autocomplete="username" spellcheck="false">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password">
+        <button type="submit" id="login-btn">Log in</button>
+      </form>
+
+      <div id="who" hidden>
+        <p class="who-line">Signed in as <strong id="who-name"></strong></p>
+        <p>Role from <code>GET /api/me</code>: <span id="who-role" class="pill"></span></p>
+        <p class="muted" id="who-exp"></p>
+        <p class="muted">The token is kept in memory only. It is not shown here, not stored in the browser and not in the address.</p>
+        <button type="button" id="logout-btn" class="secondary">Log out</button>
+      </div>
+      <p id="session-note" class="muted" role="status"></p>
+    </section>
+
+    <section class="card" aria-labelledby="models-h">
+      <h2 id="models-h">2. Models (both roles)</h2>
+
+      <form id="create-form" novalidate>
+        <label for="key">Business key</label>
+        <input id="key" name="key" type="text" spellcheck="false">
+        <label for="name">Name</label>
+        <input id="name" name="name" type="text" value="Churn model">
+        <button type="submit" id="create-btn">Register model (POST)</button>
+      </form>
+
+      <label for="model-id">Model id (UUID)</label>
+      <input id="model-id" type="text" spellcheck="false" placeholder="filled after you register a model">
+      <div class="row">
+        <button type="button" id="read-btn" class="secondary">Read model (GET)</button>
+        <button type="button" id="evaluate-btn" class="secondary">Evaluate: DRAFT → EVALUATED</button>
+      </div>
+      <p class="muted" id="current">No model yet.</p>
+    </section>
+
+    <section class="card locked" aria-labelledby="promote-h">
+      <h2 id="promote-h">3. Locked action: promote</h2>
+      <p>Moves the model to <strong>PRODUCTION</strong>. Only <span class="pill senior">ML_LEAD</span> may do it.
+         The server takes who you are from the token, never from this form.</p>
+      <label for="accuracy">Measured accuracy (0 to 1, at least 0.80 for PRODUCTION)</label>
+      <input id="accuracy" type="number" min="0" max="1" step="0.01" value="0.91">
+      <button type="button" id="promote-btn" class="danger">Promote to PRODUCTION</button>
+    </section>
+
+    <section class="card result" aria-labelledby="result-h">
+      <h2 id="result-h">Last response</h2>
+      <div id="result" aria-live="polite">
+        <p class="muted">Nothing sent yet. Every call below sends <code>X-Correlation-Id</code>.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="wrap foot">
+    <p>API contract: <a href="swagger-ui.html">Swagger UI</a> (open without a token).</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

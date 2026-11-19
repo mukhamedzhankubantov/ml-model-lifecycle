@@ -9,6 +9,7 @@ import com.mlops.modellifecycle.domain.ModelStatus;
 import com.mlops.modellifecycle.domain.PolicyViolation;
 import com.mlops.modellifecycle.security.Roles;
 import com.mlops.modellifecycle.security.SecurityConfig;
+import com.mlops.modellifecycle.service.ModelEvaluationService;
 import com.mlops.modellifecycle.service.ModelPromotionService;
 import com.mlops.modellifecycle.service.ModelRegistrationService;
 import org.junit.jupiter.api.Test;
@@ -53,6 +54,9 @@ class ModelControllerTest {
 
     @MockitoBean
     ModelPromotionService promotion;
+
+    @MockitoBean
+    ModelEvaluationService evaluation;
 
     @MockitoBean
     JwtDecoder jwtDecoder;
@@ -157,6 +161,30 @@ class ModelControllerTest {
                 .andExpect(jsonPath("$.status").value("PRODUCTION"));
 
         verify(promotion).promote(new ModelId(uuid), "lead", 0.91);
+    }
+
+    @Test
+    void evaluateUsesTheNameFromTheTokenAndReturnsTheNewStatus() throws Exception {
+        UUID uuid = UUID.randomUUID();
+        when(evaluation.evaluate(any(ModelId.class), any(String.class)))
+                .thenReturn(new ModelItem(new ModelId(uuid), new ModelKey("ML-17"),
+                        ModelStatus.EVALUATED, "Churn model"));
+
+        mvc.perform(post(BASE + "/" + uuid + "/evaluate").with(scientist()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("EVALUATED"));
+
+        verify(evaluation).evaluate(new ModelId(uuid), "scientist");
+    }
+
+    @Test
+    void evaluateRefusedByPolicyReturns409() throws Exception {
+        when(evaluation.evaluate(any(ModelId.class), any(String.class)))
+                .thenThrow(new PolicyViolation("Only a DRAFT model can be evaluated, this one is PRODUCTION!"));
+
+        mvc.perform(post(BASE + "/" + UUID.randomUUID() + "/evaluate").with(scientist()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("POLICY_VIOLATION"));
     }
 
     @Test
