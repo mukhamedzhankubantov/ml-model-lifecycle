@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -43,6 +44,13 @@ public class ApiExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiError> badBody(HttpMessageNotReadableException ex, HttpServletRequest request) {
         return error(HttpStatus.BAD_REQUEST, "VALIDATION", "body must be JSON", request);
+    }
+
+    // Login only: unknown user and wrong password must look identical.
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiError> badLogin(AuthenticationException ex, HttpServletRequest request) {
+        log.warn("login failed");
+        return error(HttpStatus.UNAUTHORIZED, "UNAUTHENTICATED", "bad username or password", request);
     }
 
     @ExceptionHandler(ModelNotFound.class)
