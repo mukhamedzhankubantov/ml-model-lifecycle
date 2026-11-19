@@ -32,6 +32,9 @@ class LoginIntegrationTest {
     @Autowired
     UserDetailsService users;
 
+    @Autowired
+    org.springframework.security.oauth2.jwt.JwtDecoder decoder;
+
     private MvcResult login(String user, String password) throws Exception {
         return mvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -59,6 +62,36 @@ class LoginIntegrationTest {
         mvc.perform(get("/api/v1/models/" + UUID.randomUUID())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void tokenFromARealLoginCarriesOnlyTheRoleName() throws Exception {
+        String body = login("scientist", "scientist-dev").getResponse().getContentAsString();
+        String token = com.jayway.jsonpath.JsonPath.read(body, "$.accessToken");
+
+        var jwt = decoder.decode(token);
+
+        assertEquals("scientist", jwt.getSubject());
+        assertEquals(java.util.List.of("DATA_SCIENTIST"), jwt.getClaimAsStringList("roles"));
+    }
+
+    @Test
+    void meShowsTheRoleThatTheIssuedTokenCarries() throws Exception {
+        String body = login("lead", "lead-dev").getResponse().getContentAsString();
+        String token = com.jayway.jsonpath.JsonPath.read(body, "$.accessToken");
+
+        mvc.perform(get("/api/me").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("lead"))
+                .andExpect(jsonPath("$.authorities[0]").value("ROLE_ML_LEAD"))
+                .andExpect(jsonPath("$.authorities.length()").value(1));
+    }
+
+    @Test
+    void forgedTokenOnMeIs401() throws Exception {
+        mvc.perform(get("/api/me").header("Authorization", "Bearer not.a.jwt"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
     }
 
     @Test

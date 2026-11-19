@@ -31,8 +31,11 @@ public class TokenService {
 
     public String issue(Authentication authentication) {
         Instant now = Instant.now();
+        // Only real roles go into the token. Spring Security 7 also puts FACTOR_PASSWORD
+        // on a password login; that says how the caller logged in, it is not a role.
         List<String> roles = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
+                .filter(a -> a.startsWith(ROLE_PREFIX))
                 .map(TokenService::withoutPrefix)
                 .sorted()
                 .toList();
@@ -54,6 +57,6 @@ public class TokenService {
     }
 
     private static String withoutPrefix(String authority) {
-        return authority.startsWith(ROLE_PREFIX) ? authority.substring(ROLE_PREFIX.length()) : authority;
+        return authority.substring(ROLE_PREFIX.length());
     }
 }

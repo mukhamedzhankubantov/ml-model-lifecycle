@@ -63,6 +63,14 @@ class TokenServiceTest {
     }
 
     @Test
+    void factorAuthoritiesAreNotCopiedIntoRoles() {
+        String token = tokens.issue(UsernamePasswordAuthenticationToken.authenticated(
+                "lead", null, AuthorityUtils.createAuthorityList("FACTOR_PASSWORD", "ROLE_" + Roles.LEAD)));
+
+        assertEquals(List.of(Roles.LEAD), decoder.decode(token).getClaimAsStringList("roles"));
+    }
+
+    @Test
     void tokenSignedWithAnotherSecretIsRejected() {
         JwtProperties other = new JwtProperties("another-secret-0123456789-abcdefghijk", ISSUER, Duration.ofMinutes(15));
         String forged = new TokenService(config.jwtEncoder(other), other)
