@@ -1,58 +1,70 @@
 package com.mlops.modellifecycle.config;
 
-import org.junit.jupiter.api.BeforeEach;
+import com.mlops.modellifecycle.security.Roles;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.context.WebApplicationContext;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * Runs through the real security filter chain (the chain is not switched off here).
+ * Only /actuator/health is open; every other actuator URL falls under "anything else".
+ */
 @SpringBootTest
+@AutoConfigureMockMvc
 @ActiveProfiles("dev")
 class ActuatorTest {
 
     @Autowired
-    WebApplicationContext context;
-
     MockMvc mvc;
 
-    @BeforeEach
-    void setUp() {
-        mvc = MockMvcBuilders.webAppContextSetup(context).build();
-    }
-
     @Test
-    void healthIsUp() throws Exception {
+    void healthIsUpWithoutAToken() throws Exception {
         mvc.perform(get("/actuator/health"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("UP"));
     }
 
     @Test
-    void infoCarriesProductName() throws Exception {
+    void infoIsBehindTheChain() throws Exception {
         mvc.perform(get("/actuator/info"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.app.name").value("ML Model Lifecycle"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
     }
 
     @Test
-    void envIsNotExposed() throws Exception {
-        mvc.perform(get("/actuator/env")).andExpect(status().isNotFound());
+    void envIsClosedWithoutAToken() throws Exception {
+        mvc.perform(get("/actuator/env")).andExpect(status().isUnauthorized());
     }
 
     @Test
-    void beansIsNotExposed() throws Exception {
-        mvc.perform(get("/actuator/beans")).andExpect(status().isNotFound());
+    void envIsClosedEvenForTheSeniorRole() throws Exception {
+        mvc.perform(get("/actuator/env").with(lead()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
 
     @Test
-    void heapdumpIsNotExposed() throws Exception {
-        mvc.perform(get("/actuator/heapdump")).andExpect(status().isNotFound());
+    void beansIsClosedWithoutAToken() throws Exception {
+        mvc.perform(get("/actuator/beans")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void heapdumpIsClosedEvenForTheSeniorRole() throws Exception {
+        mvc.perform(get("/actuator/heapdump").with(lead()))
+                .andExpect(status().isForbidden());
+    }
+
+    private static org.springframework.test.web.servlet.request.RequestPostProcessor lead() {
+        return jwt().jwt(j -> j.subject("lead"))
+                .authorities(new SimpleGrantedAuthority("ROLE_" + Roles.LEAD));
     }
 }
