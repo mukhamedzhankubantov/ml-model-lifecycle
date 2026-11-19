@@ -6,8 +6,10 @@ import com.mlops.modellifecycle.domain.ModelItem;
 import com.mlops.modellifecycle.domain.ModelKey;
 import com.mlops.modellifecycle.domain.ModelNotFound;
 import com.mlops.modellifecycle.domain.ModelStatus;
+import com.mlops.modellifecycle.domain.PolicyViolation;
 import com.mlops.modellifecycle.security.Roles;
 import com.mlops.modellifecycle.security.SecurityConfig;
+import com.mlops.modellifecycle.service.ModelPromotionService;
 import com.mlops.modellifecycle.service.ModelRegistrationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +27,9 @@ import java.util.UUID;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.endsWith;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
@@ -48,7 +52,15 @@ class ModelControllerTest {
     ModelRegistrationService service;
 
     @MockitoBean
+    ModelPromotionService promotion;
+
+    @MockitoBean
     JwtDecoder jwtDecoder;
+
+    private static RequestPostProcessor lead() {
+        return jwt().jwt(j -> j.subject("lead"))
+                .authorities(new SimpleGrantedAuthority("ROLE_" + Roles.LEAD));
+    }
 
     private static RequestPostProcessor scientist() {
         return jwt().jwt(j -> j.subject("scientist"))
@@ -128,6 +140,50 @@ class ModelControllerTest {
                 .andExpect(jsonPath("$.message").value("id must be a UUID"));
 
         verifyNoInteractions(service);
+    }
+
+    @Test
+    void promoteUsesTheNameFromTheTokenAndIgnoresAnActorInTheBody() throws Exception {
+        UUID uuid = UUID.randomUUID();
+        when(promotion.promote(any(ModelId.class), any(String.class), anyDouble()))
+                .thenReturn(new ModelItem(new ModelId(uuid), new ModelKey("ML-17"),
+                        ModelStatus.PRODUCTION, "Churn model"));
+
+        mvc.perform(post(BASE + "/" + uuid + "/promote")
+                        .with(lead())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"accuracy\":0.91,\"actor\":\"mallory\",\"role\":\"ML_LEAD\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PRODUCTION"));
+
+        verify(promotion).promote(new ModelId(uuid), "lead", 0.91);
+    }
+
+    @Test
+    void promoteRefusedByPolicyReturns409() throws Exception {
+        UUID uuid = UUID.randomUUID();
+        when(promotion.promote(any(ModelId.class), any(String.class), anyDouble()))
+                .thenThrow(new PolicyViolation("The DRAFT model must first pass through the EVALUATED stage!"));
+
+        mvc.perform(post(BASE + "/" + uuid + "/promote")
+                        .with(lead())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"accuracy\":0.91}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("POLICY_VIOLATION"));
+    }
+
+    @Test
+    void promoteWithoutAccuracyReturns400AndServiceIsNotCalled() throws Exception {
+        mvc.perform(post(BASE + "/" + UUID.randomUUID() + "/promote")
+                        .with(lead())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION"))
+                .andExpect(jsonPath("$.message").value(containsString("accuracy")));
+
+        verifyNoInteractions(promotion);
     }
 
     @Test

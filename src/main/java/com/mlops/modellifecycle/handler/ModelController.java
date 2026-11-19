@@ -3,6 +3,7 @@ package com.mlops.modellifecycle.handler;
 import com.mlops.modellifecycle.domain.ModelId;
 import com.mlops.modellifecycle.domain.ModelItem;
 import com.mlops.modellifecycle.domain.ModelKey;
+import com.mlops.modellifecycle.service.ModelPromotionService;
 import com.mlops.modellifecycle.service.ModelRegistrationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -11,6 +12,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,9 +29,11 @@ import java.util.UUID;
 @Tag(name = "Models", description = "Register and read ML models")
 public class ModelController {
     private final ModelRegistrationService service;
+    private final ModelPromotionService promotion;
 
-    public ModelController(ModelRegistrationService service) {
+    public ModelController(ModelRegistrationService service, ModelPromotionService promotion) {
         this.service = service;
+        this.promotion = promotion;
     }
 
     @PostMapping
@@ -62,5 +66,15 @@ public class ModelController {
             content = @Content(schema = @Schema(implementation = ApiError.class)))
     public ModelResponse get(@PathVariable UUID id) {
         return ModelResponse.from(service.get(new ModelId(id)));
+    }
+
+    @PostMapping("/{id}/promote")
+    @Operation(summary = "Promote a model to PRODUCTION (ML_LEAD only)")
+    public ModelResponse promote(@PathVariable UUID id,
+                                 @Valid @RequestBody PromoteRequest request,
+                                 Authentication authentication) {
+        // The actor is the authenticated name from the token, not a JSON field.
+        return ModelResponse.from(
+                promotion.promote(new ModelId(id), authentication.getName(), request.accuracy()));
     }
 }

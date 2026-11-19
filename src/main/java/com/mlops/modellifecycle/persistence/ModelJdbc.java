@@ -54,6 +54,15 @@ public class ModelJdbc {
         return rows.stream().findFirst();
     }
 
+    /**
+     * Changes the status only if the row still has the status we validated against.
+     * Returns false when no row matched (someone else changed it first).
+     */
+    public boolean updateStatus(ModelId id, ModelStatus from, ModelStatus to) {
+        return jdbc.update("UPDATE ml_model SET status = ? WHERE id = ? AND status = ?",
+                to.name(), id.getValue(), from.name()) == 1;
+    }
+
     static ModelStatus toStatus(String text) {
         try {
             return ModelStatus.valueOf(text);

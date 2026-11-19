@@ -91,6 +91,26 @@ class ModelJdbcTest {
     }
 
     @Test
+    void updateStatusChangesTheRowWhenTheOldStatusMatches() {
+        ModelId id = ModelId.newId();
+        models.insert(id, new ModelKey("ML-30"), ModelStatus.EVALUATED, "Churn model");
+
+        assertTrue(models.updateStatus(id, ModelStatus.EVALUATED, ModelStatus.PRODUCTION));
+
+        assertEquals(ModelStatus.PRODUCTION, models.findById(id).orElseThrow().status());
+    }
+
+    @Test
+    void updateStatusDoesNothingWhenTheOldStatusDiffers() {
+        ModelId id = ModelId.newId();
+        models.insert(id, new ModelKey("ML-31"), ModelStatus.DRAFT, "Churn model");
+
+        assertTrue(!models.updateStatus(id, ModelStatus.EVALUATED, ModelStatus.PRODUCTION));
+
+        assertEquals(ModelStatus.DRAFT, models.findById(id).orElseThrow().status());
+    }
+
+    @Test
     void findByIdOfMissingIdIsEmpty() {
         assertTrue(models.findById(ModelId.newId()).isEmpty());
     }
