@@ -2,6 +2,9 @@ package com.mlops.modellifecycle.handler;
 
 import com.mlops.modellifecycle.security.TokenService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -30,6 +33,12 @@ public class AuthController {
 
     @PostMapping("/login")
     @Operation(summary = "Check the password and issue a 15-minute Bearer token")
+    @ApiResponse(responseCode = "200", description = "Token issued; expiresIn is 900 seconds",
+            content = @Content(schema = @Schema(implementation = LoginResponse.class)))
+    @ApiResponse(responseCode = "400", description = "VALIDATION: username or password is blank",
+            content = @Content(schema = @Schema(implementation = ApiError.class)))
+    @ApiResponse(responseCode = "401", description = "UNAUTHENTICATED: bad username or password (one message for both)",
+            content = @Content(schema = @Schema(implementation = ApiError.class)))
     public LoginResponse login(@Valid @RequestBody LoginRequest request) {
         Authentication authenticated = authenticationManager.authenticate(
                 UsernamePasswordAuthenticationToken.unauthenticated(request.username(), request.password()));

@@ -1,5 +1,6 @@
 package com.mlops.modellifecycle.handler;
 
+import com.mlops.modellifecycle.config.OpenApiConfig;
 import com.mlops.modellifecycle.domain.ModelId;
 import com.mlops.modellifecycle.domain.ModelItem;
 import com.mlops.modellifecycle.domain.ModelKey;
@@ -9,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -37,10 +39,13 @@ public class ModelController {
     }
 
     @PostMapping
-    @Operation(summary = "Register a new model in DRAFT status")
+    @Operation(summary = "Register a new model in DRAFT status",
+            security = @SecurityRequirement(name = OpenApiConfig.BEARER))
     @ApiResponse(responseCode = "201", description = "Created; Location points to the new model",
             content = @Content(schema = @Schema(implementation = ModelResponse.class)))
     @ApiResponse(responseCode = "400", description = "VALIDATION: a field is blank, too long, or the body is not JSON",
+            content = @Content(schema = @Schema(implementation = ApiError.class)))
+    @ApiResponse(responseCode = "401", description = "UNAUTHENTICATED: no token, or the token is bad or expired",
             content = @Content(schema = @Schema(implementation = ApiError.class)))
     @ApiResponse(responseCode = "409", description = "DUPLICATE: the business key is already registered",
             content = @Content(schema = @Schema(implementation = ApiError.class)))
@@ -59,9 +64,12 @@ public class ModelController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Read one model by its UUID")
+    @Operation(summary = "Read one model by its UUID",
+            security = @SecurityRequirement(name = OpenApiConfig.BEARER))
     @ApiResponse(responseCode = "200", description = "The model",
             content = @Content(schema = @Schema(implementation = ModelResponse.class)))
+    @ApiResponse(responseCode = "401", description = "UNAUTHENTICATED: no token, or the token is bad or expired",
+            content = @Content(schema = @Schema(implementation = ApiError.class)))
     @ApiResponse(responseCode = "404", description = "NOT_FOUND: no model with this UUID",
             content = @Content(schema = @Schema(implementation = ApiError.class)))
     public ModelResponse get(@PathVariable UUID id) {
@@ -69,7 +77,20 @@ public class ModelController {
     }
 
     @PostMapping("/{id}/promote")
-    @Operation(summary = "Promote a model to PRODUCTION (ML_LEAD only)")
+    @Operation(summary = "Promote a model to PRODUCTION (ML_LEAD only)",
+            security = @SecurityRequirement(name = OpenApiConfig.BEARER))
+    @ApiResponse(responseCode = "200", description = "Promoted; the body carries the new status",
+            content = @Content(schema = @Schema(implementation = ModelResponse.class)))
+    @ApiResponse(responseCode = "400", description = "VALIDATION: accuracy is missing, outside 0..1, or the id is not a UUID",
+            content = @Content(schema = @Schema(implementation = ApiError.class)))
+    @ApiResponse(responseCode = "401", description = "UNAUTHENTICATED: no token, or the token is bad or expired",
+            content = @Content(schema = @Schema(implementation = ApiError.class)))
+    @ApiResponse(responseCode = "403", description = "FORBIDDEN: the token's role is not ML_LEAD; the model is unchanged",
+            content = @Content(schema = @Schema(implementation = ApiError.class)))
+    @ApiResponse(responseCode = "404", description = "NOT_FOUND: no model with this UUID",
+            content = @Content(schema = @Schema(implementation = ApiError.class)))
+    @ApiResponse(responseCode = "409", description = "POLICY_VIOLATION: the policy forbids this move; the model is unchanged",
+            content = @Content(schema = @Schema(implementation = ApiError.class)))
     public ModelResponse promote(@PathVariable UUID id,
                                  @Valid @RequestBody PromoteRequest request,
                                  Authentication authentication) {
