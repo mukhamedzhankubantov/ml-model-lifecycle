@@ -5,108 +5,204 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
-  <title>ML Model Lifecycle · Sign in</title>
-  <link rel="icon" href="data:,">
+  <meta name="description" content="Register, evaluate and promote machine-learning models. Only a lead sends a model to production.">
+  <title>ML Model Lifecycle</title>
+  <link rel="icon" type="image/svg+xml" href="img/logo.svg">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="top">
-    <div class="wrap">
-      <h1>ML Model Lifecycle</h1>
-      <p class="tagline">Register a model, evaluate it, and promote it to PRODUCTION. Promotion is locked to one role.</p>
-    </div>
-  </header>
 
-  <main class="wrap grid">
+  <!-- ============================== HOME ============================== -->
+  <div id="view-home">
+    <header class="nav">
+      <div class="wrap nav-row">
+        <a class="brand" href="#top" aria-label="ML Model Lifecycle">
+          <img src="img/logo.svg" alt="" width="34" height="34">
+          <span>ML Model Lifecycle</span>
+        </a>
+        <nav class="nav-links" aria-label="Main">
+          <a href="#how">How it works</a>
+          <a href="#roles">Roles</a>
+          <a class="btn small" href="#signin">Sign in</a>
+        </nav>
+      </div>
+    </header>
 
-    <section class="card" aria-labelledby="roles-h">
-      <h2 id="roles-h">Two roles</h2>
-      <dl class="roles">
-        <div>
-          <dt><span class="pill junior">DATA_SCIENTIST</span> junior</dt>
-          <dd>Register, evaluate and read models. <strong>Cannot</strong> promote: gets 403.</dd>
+    <main id="top">
+      <section class="hero">
+        <div class="wrap hero-grid">
+          <div class="hero-copy">
+            <p class="eyebrow">Model registry</p>
+            <h1>Ship models with confidence.</h1>
+            <p class="lead">Register a model, evaluate it, and promote it to production. Only a lead can make the final call.</p>
+            <img class="hero-art" src="img/hero.svg" alt="A model moving from draft to evaluated to production" width="620" height="380">
+          </div>
+
+          <section class="card signin" id="signin" aria-labelledby="signin-h">
+            <h2 id="signin-h">Sign in</h2>
+            <form id="login-form" novalidate>
+              <label for="username">Username</label>
+              <input id="username" name="username" type="text" autocomplete="username" spellcheck="false">
+              <label for="password">Password</label>
+              <input id="password" name="password" type="password" autocomplete="current-password">
+              <button type="submit" class="btn block" id="login-btn">Sign in</button>
+            </form>
+
+            <div id="login-alert" class="alert" role="alert" hidden></div>
+
+            <div class="demo">
+              <p class="demo-title">Demo accounts <span class="tag">dev only</span></p>
+              <button type="button" class="demo-row" data-fill="scientist">
+                <img src="img/scientist.svg" alt="" width="36" height="36">
+                <span class="demo-name"><strong>scientist</strong> <span class="muted">scientist-dev</span></span>
+                <span class="pill junior">DATA_SCIENTIST</span>
+              </button>
+              <button type="button" class="demo-row" data-fill="lead">
+                <img src="img/lead.svg" alt="" width="36" height="36">
+                <span class="demo-name"><strong>lead</strong> <span class="muted">lead-dev</span></span>
+                <span class="pill senior">ML_LEAD</span>
+              </button>
+            </div>
+
+            <button type="button" class="link" id="probe-btn">Try the API without signing in</button>
+          </section>
         </div>
-        <div>
-          <dt><span class="pill senior">ML_LEAD</span> senior</dt>
-          <dd>Everything the junior can do, and <strong>promote</strong> a model to PRODUCTION.</dd>
+      </section>
+
+      <section class="section" id="how" aria-labelledby="how-h">
+        <div class="wrap">
+          <h2 id="how-h">How it works</h2>
+          <p class="section-sub">Every model follows the same three steps.</p>
+          <ol class="steps">
+            <li class="step">
+              <img src="img/draft.svg" alt="" width="96" height="96">
+              <h3>Draft</h3>
+              <p>Register a model under a unique key.</p>
+              <span class="badge draft">DRAFT</span>
+            </li>
+            <li class="step">
+              <img src="img/evaluated.svg" alt="" width="96" height="96">
+              <h3>Evaluate</h3>
+              <p>Check a draft before it goes any further.</p>
+              <span class="badge evaluated">EVALUATED</span>
+            </li>
+            <li class="step">
+              <img src="img/production.svg" alt="" width="96" height="96">
+              <h3>Promote</h3>
+              <p>A lead promotes models that reach 80% accuracy.</p>
+              <span class="badge production">PRODUCTION</span>
+            </li>
+          </ol>
         </div>
-      </dl>
-      <div class="dev">
-        <p class="dev-title">Dev only: classroom users (the <code>dev</code> profile on this laptop)</p>
-        <table>
-          <thead><tr><th>Username</th><th>Password</th><th>Role</th><th></th></tr></thead>
-          <tbody>
-            <tr><td><code>scientist</code></td><td><code>scientist-dev</code></td><td>DATA_SCIENTIST</td>
-                <td><button type="button" class="link" data-fill="scientist">Fill form</button></td></tr>
-            <tr><td><code>lead</code></td><td><code>lead-dev</code></td><td>ML_LEAD</td>
-                <td><button type="button" class="link" data-fill="lead">Fill form</button></td></tr>
-          </tbody>
-        </table>
+      </section>
+
+      <section class="section alt" id="roles" aria-labelledby="roles-h">
+        <div class="wrap">
+          <h2 id="roles-h">Two roles</h2>
+          <p class="section-sub">Everyone can build. One role can release.</p>
+          <div class="roles">
+            <article class="role">
+              <img src="img/scientist.svg" alt="" width="84" height="84">
+              <div>
+                <h3>Data Scientist <span class="pill junior">DATA_SCIENTIST</span></h3>
+                <ul class="ticks">
+                  <li>Register models</li>
+                  <li>Evaluate drafts</li>
+                  <li>Read any model</li>
+                  <li class="off">Promote to production</li>
+                </ul>
+              </div>
+            </article>
+            <article class="role">
+              <img src="img/lead.svg" alt="" width="84" height="84">
+              <div>
+                <h3>ML Lead <span class="pill senior">ML_LEAD</span></h3>
+                <ul class="ticks">
+                  <li>Register models</li>
+                  <li>Evaluate drafts</li>
+                  <li>Read any model</li>
+                  <li>Promote to production</li>
+                </ul>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <div class="wrap foot-row">
+        <span>ML Model Lifecycle</span>
+        <a href="swagger-ui.html">API reference</a>
       </div>
-    </section>
+    </footer>
+  </div>
 
-    <section class="card" aria-labelledby="session-h">
-      <h2 id="session-h">1. Session</h2>
-
-      <form id="login-form" autocomplete="on" novalidate>
-        <label for="username">Username</label>
-        <input id="username" name="username" type="text" autocomplete="username" spellcheck="false">
-        <label for="password">Password</label>
-        <input id="password" name="password" type="password" autocomplete="current-password">
-        <button type="submit" id="login-btn">Log in</button>
-      </form>
-
-      <div id="who" hidden>
-        <p class="who-line">Signed in as <strong id="who-name"></strong></p>
-        <p>Role from <code>GET /api/me</code>: <span id="who-role" class="pill"></span></p>
-        <p class="muted" id="who-exp"></p>
-        <p class="muted">The token is kept in memory only. It is not shown here, not stored in the browser and not in the address.</p>
-        <button type="button" id="logout-btn" class="secondary">Log out</button>
+  <!-- ============================ WORKSPACE =========================== -->
+  <div id="view-workspace" hidden>
+    <header class="nav">
+      <div class="wrap nav-row">
+        <div class="brand">
+          <img src="img/logo.svg" alt="" width="34" height="34">
+          <span>ML Model Lifecycle</span>
+        </div>
+        <div class="user">
+          <img id="who-avatar" src="img/scientist.svg" alt="" width="36" height="36">
+          <div class="user-text">
+            <strong id="who-name"></strong>
+            <span id="who-role" class="pill"></span>
+          </div>
+          <span class="muted session" id="who-exp"></span>
+          <button type="button" class="btn ghost small" id="logout-btn">Log out</button>
+        </div>
       </div>
-      <p id="session-note" class="muted" role="status"></p>
-    </section>
+    </header>
 
-    <section class="card" aria-labelledby="models-h">
-      <h2 id="models-h">2. Models (both roles)</h2>
-
-      <form id="create-form" novalidate>
-        <label for="key">Business key</label>
-        <input id="key" name="key" type="text" spellcheck="false">
-        <label for="name">Name</label>
-        <input id="name" name="name" type="text" value="Churn model">
-        <button type="submit" id="create-btn">Register model (POST)</button>
-      </form>
-
-      <label for="model-id">Model id (UUID)</label>
-      <input id="model-id" type="text" spellcheck="false" placeholder="filled after you register a model">
-      <div class="row">
-        <button type="button" id="read-btn" class="secondary">Read model (GET)</button>
-        <button type="button" id="evaluate-btn" class="secondary">Evaluate: DRAFT → EVALUATED</button>
+    <main class="wrap workspace">
+      <div class="ws-head">
+        <h1>Models</h1>
+        <p class="muted" id="ws-hint"></p>
       </div>
-      <p class="muted" id="current">No model yet.</p>
-    </section>
 
-    <section class="card locked" aria-labelledby="promote-h">
-      <h2 id="promote-h">3. Locked action: promote</h2>
-      <p>Moves the model to <strong>PRODUCTION</strong>. Only <span class="pill senior">ML_LEAD</span> may do it.
-         The server takes who you are from the token, never from this form.</p>
-      <label for="accuracy">Measured accuracy (0 to 1, at least 0.80 for PRODUCTION)</label>
-      <input id="accuracy" type="number" min="0" max="1" step="0.01" value="0.91">
-      <button type="button" id="promote-btn" class="danger">Promote to PRODUCTION</button>
-    </section>
+      <div class="ws-grid">
+        <aside class="card" aria-labelledby="new-h">
+          <h2 id="new-h">Register a model</h2>
+          <form id="create-form" novalidate>
+            <label for="key">Key</label>
+            <input id="key" name="key" type="text" spellcheck="false">
+            <label for="name">Name</label>
+            <input id="name" name="name" type="text" value="Churn model">
+            <button type="submit" class="btn block" id="create-btn">Register</button>
+          </form>
+        </aside>
 
-    <section class="card result" aria-labelledby="result-h">
-      <h2 id="result-h">Last response</h2>
-      <div id="result" aria-live="polite">
-        <p class="muted">Nothing sent yet. Every call below sends <code>X-Correlation-Id</code>.</p>
+        <section class="card table-card" aria-labelledby="list-h">
+          <h2 id="list-h">Your models</h2>
+
+          <div id="models-empty" class="empty">
+            <img src="img/empty.svg" alt="" width="160" height="112">
+            <p><strong>No models yet</strong></p>
+            <p class="muted">Register your first model to get started.</p>
+          </div>
+
+          <div class="table-wrap" id="models-table" hidden>
+            <table>
+              <thead>
+                <tr><th>Model</th><th>Status</th><th>Actions</th></tr>
+              </thead>
+              <tbody id="models-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card activity" aria-labelledby="act-h">
+          <h2 id="act-h">Activity</h2>
+          <p id="activity-empty" class="muted">Responses will appear here.</p>
+          <ol id="activity-list" class="activity-list" aria-live="polite"></ol>
+        </section>
       </div>
-    </section>
-
-  </main>
-
-  <footer class="wrap foot">
-    <p>API contract: <a href="swagger-ui.html">Swagger UI</a> (open without a token).</p>
-  </footer>
+    </main>
+  </div>
 
   <script src="app.js"></script>
 </body>

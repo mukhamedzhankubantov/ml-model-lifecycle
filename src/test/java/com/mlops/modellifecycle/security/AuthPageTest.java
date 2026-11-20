@@ -38,7 +38,7 @@ class AuthPageTest {
                 .andExpect(content().string(containsString("DATA_SCIENTIST")))
                 .andExpect(content().string(containsString("ML_LEAD")))
                 .andExpect(content().string(containsString("scientist-dev")))
-                .andExpect(content().string(containsString("Dev only")))
+                .andExpect(content().string(containsString("dev only")))
                 .andExpect(content().string(containsString("type=\"password\"")))
                 .andExpect(content().string(not(containsString("Please sign in"))));
     }
@@ -47,6 +47,21 @@ class AuthPageTest {
     void cssAndScriptAreOpen() throws Exception {
         mvc.perform(get("/styles.css")).andExpect(status().isOk());
         mvc.perform(get("/app.js")).andExpect(status().isOk());
+    }
+
+    @Test
+    void everyImageTheHomePageUsesIsServedWithNoToken() throws Exception {
+        String html = mvc.perform(get("/index.html")).andReturn().getResponse().getContentAsString();
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("src=\"(img/[^\"]+)\"").matcher(html);
+
+        int count = 0;
+        while (m.find()) {
+            count++;
+            mvc.perform(get("/" + m.group(1)))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentTypeCompatibleWith("image/svg+xml"));
+        }
+        org.junit.jupiter.api.Assertions.assertTrue(count >= 8, "expected the page to use its images, found " + count);
     }
 
     @Test

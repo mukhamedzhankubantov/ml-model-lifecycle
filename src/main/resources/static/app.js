@@ -4,8 +4,10 @@
   // The access token lives only in this variable. It is never written to the page text,
   // the address bar or any browser storage, and it is gone when the tab closes or on log out.
   let accessToken = null;
-  let signedIn = null;      // { name, roles: ['ML_LEAD'], expiresIn, expiresAt }
-  let currentModel = null;  // { id, key, name, status }
+  let session = null;            // { name, roles, expiresIn }
+  const models = [];             // models registered in this tab, newest first
+  const activity = [];           // latest responses, newest first
+  const MAX_ACTIVITY = 8;
 
   const DEV_PASSWORDS = { scientist: 'scientist-dev', lead: 'lead-dev' };
   const STATUS_TEXT = {
@@ -13,10 +15,11 @@
     403: 'Forbidden', 404: 'Not Found', 409: 'Conflict', 415: 'Unsupported Media Type',
     500: 'Server Error'
   };
+  const NO_MODEL_ID = '00000000-0000-0000-0000-000000000000';
 
   const $ = (id) => document.getElementById(id);
 
-  // Server text is always put in with textContent, never as HTML.
+  // Text from the server is always inserted with textContent, never as HTML.
   function h(tag, className, text) {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -60,95 +63,123 @@
     let data = null;
     try { data = await response.json(); } catch (e) { /* empty or not JSON */ }
 
-    const result = { call: method + ' ' + path, status: response.status, data, correlationId };
+    const result = { call: method + ' ' + path, status: response.status, data, correlationId, usedToken: useToken };
     if (response.status === 401 && useToken) {
-      // The token we hold was refused (expired or bad). Drop it and go back to the form.
-      endSession('The server answered 401: the token was rejected or has expired. Log in again.');
+      // The token we hold was refused (expired or bad). Drop it and go back to the sign-in screen.
+      endSession();
+      showAlert(result, 'Your session has ended. Sign in again.');
     }
     return result;
   }
 
-  // ---------------------------------------------------------------- result panel
+  // ---------------------------------------------------------------- views
 
-  function resultHead(r) {
-    const head = h('div', 'res-head');
-    head.append(h('span', 'res-call', r.call));
+  function showView(name) {
+    $('view-home').hidden = name !== 'home';
+    $('view-workspace').hidden = name !== 'workspace';
+    window.scrollTo(0, 0);
+  }
+
+  function badge(status) {
+    return h('span', 'badge ' + String(status).toLowerCase(), status);
+  }
+
+  function httpChip(r) {
     const ok = r.status >= 200 && r.status < 300;
     const label = r.status ? ('HTTP ' + r.status + ' ' + (STATUS_TEXT[r.status] || '')).trim() : 'No response';
-    head.append(h('span', 'http ' + (ok ? 'ok' : 'err'), label));
-    return head;
+    return h('span', 'http ' + (ok ? 'ok' : 'err'), label);
   }
 
-  function renderResult(r, notes) {
-    const box = $('result');
-    box.replaceChildren(resultHead(r));
+  function isError(r) {
+    return r.networkError || (r.data && r.data.code);
+  }
 
-    const kv = h('dl', 'kv');
-    const add = (key, value, cls) => {
-      kv.append(h('dt', '', key));
-      kv.append(h('dd', cls || '', String(value)));
-    };
-    const d = r.data;
+  // ---------------------------------------------------------------- sign-in alert
 
+  function showAlert(r, heading) {
+    const box = $('login-alert');
+    box.replaceChildren();
+    box.className = 'alert ' + (isError(r) ? 'err' : 'ok');
+
+    if (heading) box.append(h('strong', '', heading));
     if (r.networkError) {
-      add('error', 'could not reach the server');
-    } else if (d && d.code) {
-      // 400, 401, 403, 404, 409: the one error shape of this API.
-      add('code', d.code);
-      add('message', d.message);
-      add('correlationId', d.correlationId);
-    } else if (d && d.status) {
-      add('status', d.status, 'status-token');
-      add('businessKey', d.businessKey);
-      add('name', d.name);
-      add('id', d.id);
-    } else if (d && d.username) {
-      add('username', d.username);
-      add('authorities', (d.authorities || []).join(', '));
+      box.append(h('span', '', 'Could not reach the server.'));
+    } else if (r.data && r.data.code) {
+      box.append(h('strong', '', r.status + ' · ' + r.data.code));
+      box.append(h('span', '', r.data.message));
+      box.append(h('span', 'mono', 'correlationId ' + r.data.correlationId));
+    } else if (r.data && r.data.username) {
+      box.append(h('span', '', 'Signed in as ' + r.data.username + '.'));
     }
-    if (kv.childNodes.length > 0) box.append(kv);
-
-    const sent = h('p', 'muted', 'Sent X-Correlation-Id: ' + r.correlationId);
-    box.append(sent);
-
-    (notes || []).forEach((text) => box.append(h('p', 'note', text)));
+    box.hidden = false;
   }
 
-  function renderPlain(text) {
-    $('result').replaceChildren(h('p', 'muted', text));
+  function clearAlert() {
+    const box = $('login-alert');
+    box.replaceChildren();
+    box.hidden = true;
+  }
+
+  // ---------------------------------------------------------------- activity
+
+  function addActivity(r, note) {
+    activity.unshift({ r, note, at: new Date() });
+    activity.length = Math.min(activity.length, MAX_ACTIVITY);
+    renderActivity();
+  }
+
+  function renderActivity() {
+    const list = $('activity-list');
+    list.replaceChildren();
+    $('activity-empty').hidden = activity.length > 0;
+
+    activity.forEach(({ r, note, at }) => {
+      const li = h('li', 'act');
+      const top = h('div', 'act-top');
+      top.append(h('span', 'act-call', r.call), httpChip(r), h('span', 'act-time', at.toLocaleTimeString()));
+      li.append(top);
+
+      const body = h('div', 'act-body');
+      if (r.networkError) {
+        body.append(h('span', '', 'Could not reach the server.'));
+      } else if (r.data && r.data.code) {
+        body.append(h('strong', '', r.data.code), h('span', '', r.data.message),
+          h('span', 'mono', 'correlationId ' + r.data.correlationId));
+      } else if (r.data && r.data.status) {
+        body.append(badge(r.data.status), h('span', '', r.data.name + ' · ' + r.data.businessKey));
+      } else if (r.data && r.data.username) {
+        body.append(h('span', '', r.data.username + ' · ' + (r.data.authorities || []).join(', ')));
+      }
+      if (body.childNodes.length > 0) li.append(body);
+      if (note) li.append(h('p', 'act-note', note));
+      list.append(li);
+    });
   }
 
   // ---------------------------------------------------------------- session
 
   function roleNames(authorities) {
-    return (authorities || [])
-      .filter((a) => a.startsWith('ROLE_'))
-      .map((a) => a.slice('ROLE_'.length));
+    return (authorities || []).filter((a) => a.startsWith('ROLE_')).map((a) => a.slice('ROLE_'.length));
   }
 
-  function renderSession(note) {
-    const isIn = accessToken !== null && signedIn !== null;
-    $('login-form').hidden = isIn;
-    $('who').hidden = !isIn;
-
-    if (isIn) {
-      $('who-name').textContent = signedIn.name;
-      const pill = $('who-role');
-      const roles = signedIn.roles.join(', ') || 'no role';
-      pill.textContent = roles;
-      pill.className = 'pill ' + (signedIn.roles.includes('ML_LEAD') ? 'senior'
-        : signedIn.roles.includes('DATA_SCIENTIST') ? 'junior' : '');
-      const minutes = Math.round(signedIn.expiresIn / 60);
-      $('who-exp').textContent = 'Token lifetime: ' + minutes + ' minutes (' + signedIn.expiresIn
-        + ' s), valid until ' + signedIn.expiresAt.toLocaleTimeString() + '.';
-    }
-    $('session-note').textContent = note || '';
+  function renderSession() {
+    if (!session) return;
+    const senior = session.roles.includes('ML_LEAD');
+    $('who-name').textContent = session.name;
+    const pill = $('who-role');
+    pill.textContent = session.roles.join(', ') || 'no role';
+    pill.className = 'pill ' + (senior ? 'senior' : session.roles.includes('DATA_SCIENTIST') ? 'junior' : '');
+    $('who-avatar').src = senior ? 'img/lead.svg' : 'img/scientist.svg';
+    $('who-exp').textContent = 'Session ' + Math.round(session.expiresIn / 60) + ' min (' + session.expiresIn + ' s)';
+    $('ws-hint').textContent = senior
+      ? 'You can register, evaluate and promote models.'
+      : 'You can register and evaluate models. Promoting needs the ML Lead role.';
   }
 
-  function endSession(note) {
+  function endSession() {
     accessToken = null;
-    signedIn = null;
-    renderSession(note);
+    session = null;
+    showView('home');
   }
 
   async function onLogin(event) {
@@ -156,137 +187,163 @@
     const username = $('username').value;
     const password = $('password').value;
     $('password').value = '';
+    clearAlert();
 
-    const r = await call('POST', '/api/v1/auth/login', { username, password }, { auth: false });
-
-    if (r.status !== 200 || !r.data || !r.data.accessToken) {
-      // Wrong password, blank field, or a failure: no token is kept and the form stays.
+    const login = await call('POST', '/api/v1/auth/login', { username, password }, { auth: false });
+    if (login.status !== 200 || !login.data || !login.data.accessToken) {
+      // Wrong password, blank field or a failure: no token is kept and the form stays.
       accessToken = null;
-      signedIn = null;
-      renderResult(r);
-      renderSession('');
+      session = null;
+      showAlert(login);
       return;
     }
 
-    accessToken = r.data.accessToken;
-    const expiresIn = Number(r.data.expiresIn);
-    const tokenType = r.data.tokenType;
+    accessToken = login.data.accessToken;
+    const expiresIn = Number(login.data.expiresIn);
 
-    // The role shown on the page comes from the server, from the token it just verified.
+    // The role shown comes from the server, from the token it just verified.
     const me = await call('GET', '/api/me');
     if (me.status !== 200 || !me.data) {
       accessToken = null;
-      renderResult(me);
-      renderSession('Could not read who you are from /api/me. Not signed in.');
+      showAlert(me, 'Could not read your profile.');
       return;
     }
 
-    signedIn = {
-      name: me.data.username,
-      roles: roleNames(me.data.authorities),
-      expiresIn,
-      expiresAt: new Date(Date.now() + expiresIn * 1000)
-    };
-
-    // Show the login outcome without the token itself.
-    const shown = {
-      call: r.call, status: r.status, correlationId: r.correlationId,
-      data: null
-    };
-    renderResult(shown, [
-      'Token received (' + tokenType + ', expiresIn ' + expiresIn + ' = ' + Math.round(expiresIn / 60)
-        + ' minutes). It is kept in memory and is not shown.',
-      'GET /api/me → HTTP ' + me.status + ': ' + signedIn.name + ' is ' + (signedIn.roles.join(', ') || 'no role') + '.'
-    ]);
-    renderSession('');
+    session = { name: me.data.username, roles: roleNames(me.data.authorities), expiresIn };
+    addActivity({ call: login.call, status: login.status, data: null, correlationId: login.correlationId },
+      'Signed in. Session lasts ' + Math.round(expiresIn / 60) + ' minutes.');
+    addActivity(me);
+    renderSession();
+    renderModels();
+    showView('workspace');
   }
 
-  function onLogout() {
-    endSession('Logged out. The token variable is cleared. The next API call from this page has no token.');
-    renderPlain('Logged out. Run an API call below: it will be 401.');
+  async function probeWithoutToken() {
+    // The same kind of call the workspace makes, sent with no token on purpose.
+    const path = models.length > 0 ? '/api/v1/models/' + encodeURIComponent(models[0].id) : '/api/me';
+    const r = await call('GET', path, undefined, { auth: false });
+    showAlert(r, 'Request without a token');
+  }
+
+  async function onLogout() {
+    endSession();
+    $('password').value = '';
+    await probeWithoutToken();   // the next call from the page shows the 401
   }
 
   // ---------------------------------------------------------------- models
 
-  function setCurrent(model) {
-    currentModel = { id: model.id, key: model.businessKey, name: model.name, status: model.status };
-    $('model-id').value = model.id;
-    $('current').textContent = 'Current model: ' + model.businessKey + ' · status ' + model.status;
+  function upsert(model) {
+    const entry = { id: model.id, key: model.businessKey, name: model.name, status: model.status };
+    const i = models.findIndex((m) => m.id === entry.id);
+    if (i >= 0) models[i] = Object.assign(models[i], entry);
+    else models.unshift(entry);
+    renderModels();
   }
 
-  function modelPath(suffix) {
-    const id = $('model-id').value.trim();
-    if (!id) return null;
-    return '/api/v1/models/' + encodeURIComponent(id) + (suffix || '');
+  function renderModels() {
+    const body = $('models-body');
+    body.replaceChildren();
+    $('models-empty').hidden = models.length > 0;
+    $('models-table').hidden = models.length === 0;
+
+    models.forEach((m) => {
+      const tr = h('tr');
+
+      const name = h('td');
+      name.append(h('span', 'm-name', m.name), h('span', 'm-key', m.key));
+
+      const status = h('td');
+      status.append(badge(m.status));
+
+      const actions = h('td');
+      const box = h('div', 'actions');
+
+      const evaluate = h('button', 'btn ghost small', 'Evaluate');
+      evaluate.type = 'button';
+      evaluate.addEventListener('click', guarded(() => evaluateModel(m.id)));
+
+      const accuracy = h('input');
+      accuracy.type = 'number';
+      accuracy.min = '0';
+      accuracy.max = '1';
+      accuracy.step = '0.01';
+      accuracy.value = '0.91';
+      accuracy.setAttribute('aria-label', 'Accuracy for ' + m.name);
+
+      const promote = h('button', 'btn lock small', 'Promote');
+      promote.type = 'button';
+      promote.addEventListener('click', guarded(() => promoteModel(m.id, accuracy.valueAsNumber)));
+
+      const refresh = h('button', 'btn ghost small', 'Refresh');
+      refresh.type = 'button';
+      refresh.addEventListener('click', guarded(() => readModel(m.id)));
+
+      const promoteBox = h('span', 'promote-box');
+      promoteBox.append(accuracy, promote);
+      box.append(evaluate, promoteBox, refresh);
+      actions.append(box);
+
+      tr.append(name, status, actions);
+      body.append(tr);
+    });
   }
 
-  function needModel() {
-    renderPlain('Register a model first (section 2), then evaluate it.');
-  }
+  const modelPath = (id, suffix) => '/api/v1/models/' + encodeURIComponent(id) + (suffix || '');
 
   async function onCreate(event) {
     event.preventDefault();
-    const key = $('key').value;
-    const name = $('name').value;
-    const r = await call('POST', '/api/v1/models', { businessKey: key, name });
-    renderResult(r);
+    const r = await call('POST', '/api/v1/models', {
+      businessKey: $('key').value,
+      name: $('name').value
+    });
+    addActivity(r);
     if (r.status === 201 && r.data) {
-      setCurrent(r.data);
+      upsert(r.data);
       $('key').value = newBusinessKey();
     }
   }
 
-  async function onRead() {
-    const path = modelPath('');
-    if (!path) return needModel();
-    const r = await call('GET', path);
-    renderResult(r);
-    if (r.status === 200 && r.data) setCurrent(r.data);
+  async function readModel(id) {
+    const r = await call('GET', modelPath(id));
+    addActivity(r);
+    if (r.status === 200 && r.data) upsert(r.data);
   }
 
-  async function onEvaluate() {
-    const path = modelPath('/evaluate');
-    if (!path) return needModel();
-    const r = await call('POST', path);
-    renderResult(r);
-    if (r.status === 200 && r.data) setCurrent(r.data);
+  async function evaluateModel(id) {
+    const r = await call('POST', modelPath(id, '/evaluate'));
+    addActivity(r);
+    if (r.status === 200 && r.data) upsert(r.data);
   }
 
-  async function onPromote() {
-    const path = modelPath('/promote');
-    if (!path) return needModel();
-
-    const id = $('model-id').value.trim();
-    const before = currentModel && currentModel.id === id ? currentModel.status : null;
-    const accuracy = $('accuracy').valueAsNumber;
+  async function promoteModel(id, accuracy) {
+    const known = models.find((m) => m.id === id);
+    const before = known ? known.status : null;
 
     // Only the accuracy is sent. Who is asking is decided by the token, not by this body.
-    const r = await call('POST', path, { accuracy: Number.isNaN(accuracy) ? null : accuracy });
+    const r = await call('POST', modelPath(id, '/promote'), { accuracy: Number.isNaN(accuracy) ? null : accuracy });
 
     if (r.status === 200 && r.data) {
-      setCurrent(r.data);
-      renderResult(r, [
-        'Promoted' + (before ? ': status ' + before + ' → ' + r.data.status : ': status is now ' + r.data.status) + '.'
-      ]);
+      upsert(r.data);
+      addActivity(r, (before ? before + ' → ' : 'Now ') + r.data.status);
       return;
     }
 
-    // Refused. Read the row again to show whether anything changed.
-    const notes = [];
-    const again = await call('GET', '/api/v1/models/' + encodeURIComponent(id));
+    // Refused: read the row again so the page can say whether anything changed.
+    let note = null;
+    const again = await call('GET', modelPath(id));
     if (again.status === 200 && again.data) {
-      const after = again.data.status;
-      notes.push(before && before === after
-        ? 'The row did not change: status is still ' + after + '.'
-        : 'Checked with GET: status is ' + after + '.');
-      setCurrent(again.data);
+      note = before && before === again.data.status
+        ? 'Nothing changed: status is still ' + again.data.status + '.'
+        : 'Status is ' + again.data.status + '.';
+      upsert(again.data);
     }
-    renderResult(r, notes);
+    addActivity(r, note);
   }
 
   // ---------------------------------------------------------------- wiring
 
-  function fillDev(event) {
+  function fillDemo(event) {
     const who = event.currentTarget.getAttribute('data-fill');
     $('username').value = who;
     $('password').value = DEV_PASSWORDS[who] || '';
@@ -300,19 +357,19 @@
       try {
         await fn(event);
       } finally {
-        buttons.forEach((b) => { b.disabled = false; });
+        document.querySelectorAll('button').forEach((b) => { b.disabled = false; });
       }
     };
   }
 
   $('login-form').addEventListener('submit', guarded(onLogin));
-  $('logout-btn').addEventListener('click', onLogout);
+  $('logout-btn').addEventListener('click', guarded(onLogout));
+  $('probe-btn').addEventListener('click', guarded(probeWithoutToken));
   $('create-form').addEventListener('submit', guarded(onCreate));
-  $('read-btn').addEventListener('click', guarded(onRead));
-  $('evaluate-btn').addEventListener('click', guarded(onEvaluate));
-  $('promote-btn').addEventListener('click', guarded(onPromote));
-  document.querySelectorAll('[data-fill]').forEach((b) => b.addEventListener('click', fillDev));
+  document.querySelectorAll('[data-fill]').forEach((b) => b.addEventListener('click', fillDemo));
 
   $('key').value = newBusinessKey();
-  renderSession('');
+  renderModels();
+  renderActivity();
+  showView('home');
 })();

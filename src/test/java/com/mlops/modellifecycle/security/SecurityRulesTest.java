@@ -263,6 +263,7 @@ class SecurityRulesTest {
     @Test
     void pageAndSpringdocPathsAreOpenWithNoToken() throws Exception {
         for (String path : new String[]{"/", "/index.html", "/styles.css", "/app.js",
+                "/img/logo.svg", "/img/hero.svg",
                 "/swagger-ui.html", "/swagger-ui/index.html", "/v3/api-docs"}) {
             int code = mvc.perform(get(path)).andReturn().getResponse().getStatus();
             assertNotEquals(401, code, path + " must not ask for a token");
