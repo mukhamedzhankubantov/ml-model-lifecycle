@@ -48,7 +48,6 @@ public class ApiExceptionHandler {
         return error(HttpStatus.BAD_REQUEST, "VALIDATION", "body must be JSON", request);
     }
 
-    // Login only: unknown user and wrong password must look identical.
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiError> badLogin(AuthenticationException ex, HttpServletRequest request) {
         log.warn("login failed");
@@ -65,8 +64,6 @@ public class ApiExceptionHandler {
         return error(HttpStatus.CONFLICT, "POLICY_VIOLATION", ex.getMessage(), request);
     }
 
-    // Defense in depth: @PreAuthorize throws inside the controller call, where the
-    // filter-level handler does not see it. Same 403 body as the URL rule.
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiError> forbidden(AccessDeniedException ex, HttpServletRequest request) {
         return error(HttpStatus.FORBIDDEN, "FORBIDDEN", "not allowed for your role", request);

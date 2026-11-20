@@ -1,12 +1,10 @@
 (() => {
   'use strict';
 
-  // The access token lives only in this variable. It is never written to the page text,
-  // the address bar or any browser storage, and it is gone when the tab closes or on log out.
   let accessToken = null;
-  let session = null;            // { name, roles, expiresIn }
-  const models = [];             // models registered in this tab, newest first
-  const activity = [];           // latest responses, newest first
+  let session = null;
+  const models = [];
+  const activity = [];
   const MAX_ACTIVITY = 8;
 
   const DEV_PASSWORDS = { scientist: 'scientist-dev', lead: 'lead-dev' };
@@ -19,7 +17,6 @@
 
   const $ = (id) => document.getElementById(id);
 
-  // Text from the server is always inserted with textContent, never as HTML.
   function h(tag, className, text) {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -37,8 +34,6 @@
   function newBusinessKey() {
     return 'ML-' + Date.now().toString(36).toUpperCase();
   }
-
-  // ---------------------------------------------------------------- HTTP
 
   async function call(method, path, body, options) {
     const useToken = !(options && options.auth === false) && accessToken !== null;
@@ -61,18 +56,15 @@
     }
 
     let data = null;
-    try { data = await response.json(); } catch (e) { /* empty or not JSON */ }
+    try { data = await response.json(); } catch (e) {}
 
     const result = { call: method + ' ' + path, status: response.status, data, correlationId, usedToken: useToken };
     if (response.status === 401 && useToken) {
-      // The token we hold was refused (expired or bad). Drop it and go back to the sign-in screen.
       endSession();
       showAlert(result, 'Your session has ended. Sign in again.');
     }
     return result;
   }
-
-  // ---------------------------------------------------------------- views
 
   function showView(name) {
     $('view-home').hidden = name !== 'home';
@@ -93,8 +85,6 @@
   function isError(r) {
     return r.networkError || (r.data && r.data.code);
   }
-
-  // ---------------------------------------------------------------- sign-in alert
 
   function showAlert(r, heading) {
     const box = $('login-alert');
@@ -119,8 +109,6 @@
     box.replaceChildren();
     box.hidden = true;
   }
-
-  // ---------------------------------------------------------------- activity
 
   function addActivity(r, note) {
     activity.unshift({ r, note, at: new Date() });
@@ -156,8 +144,6 @@
     });
   }
 
-  // ---------------------------------------------------------------- session
-
   function roleNames(authorities) {
     return (authorities || []).filter((a) => a.startsWith('ROLE_')).map((a) => a.slice('ROLE_'.length));
   }
@@ -191,7 +177,6 @@
 
     const login = await call('POST', '/api/v1/auth/login', { username, password }, { auth: false });
     if (login.status !== 200 || !login.data || !login.data.accessToken) {
-      // Wrong password, blank field or a failure: no token is kept and the form stays.
       accessToken = null;
       session = null;
       showAlert(login);
@@ -201,7 +186,6 @@
     accessToken = login.data.accessToken;
     const expiresIn = Number(login.data.expiresIn);
 
-    // The role shown comes from the server, from the token it just verified.
     const me = await call('GET', '/api/me');
     if (me.status !== 200 || !me.data) {
       accessToken = null;
@@ -219,7 +203,6 @@
   }
 
   async function probeWithoutToken() {
-    // The same kind of call the workspace makes, sent with no token on purpose.
     const path = models.length > 0 ? '/api/v1/models/' + encodeURIComponent(models[0].id) : '/api/me';
     const r = await call('GET', path, undefined, { auth: false });
     showAlert(r, 'Request without a token');
@@ -228,10 +211,8 @@
   async function onLogout() {
     endSession();
     $('password').value = '';
-    await probeWithoutToken();   // the next call from the page shows the 401
+    await probeWithoutToken();
   }
-
-  // ---------------------------------------------------------------- models
 
   function upsert(model) {
     const entry = { id: model.id, key: model.businessKey, name: model.name, status: model.status };
@@ -320,7 +301,6 @@
     const known = models.find((m) => m.id === id);
     const before = known ? known.status : null;
 
-    // Only the accuracy is sent. Who is asking is decided by the token, not by this body.
     const r = await call('POST', modelPath(id, '/promote'), { accuracy: Number.isNaN(accuracy) ? null : accuracy });
 
     if (r.status === 200 && r.data) {
@@ -329,7 +309,6 @@
       return;
     }
 
-    // Refused: read the row again so the page can say whether anything changed.
     let note = null;
     const again = await call('GET', modelPath(id));
     if (again.status === 200 && again.data) {
@@ -340,8 +319,6 @@
     }
     addActivity(r, note);
   }
-
-  // ---------------------------------------------------------------- wiring
 
   function fillDemo(event) {
     const who = event.currentTarget.getAttribute('data-fill');

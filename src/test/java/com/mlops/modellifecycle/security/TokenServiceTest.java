@@ -18,7 +18,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** No Spring context: the token is signed and read back with the same test secret. */
 class TokenServiceTest {
 
     private static final String SECRET = "test-secret-0123456789-abcdefghijklmnop";

@@ -14,10 +14,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Runs through the real security filter chain (the chain is not switched off here).
- * Only /actuator/health is open; every other actuator URL falls under "anything else".
- */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("dev")

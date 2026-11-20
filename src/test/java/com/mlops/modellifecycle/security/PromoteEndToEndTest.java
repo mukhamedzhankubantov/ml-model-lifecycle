@@ -24,10 +24,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Real login, real token, real filter chain, real database. This is the test that proves the
- * roles claim is turned into ROLE_ authorities (the slice tests use jwt(), which skips that).
- */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("dev")
@@ -82,7 +78,6 @@ class PromoteEndToEndTest {
         String scientist = tokenFor("scientist", "scientist-dev");
         String lead = tokenFor("lead", "lead-dev");
 
-        // scientist registers and evaluates (allowed for both roles)
         String created = mvc.perform(post("/api/v1/models")
                         .header("Authorization", "Bearer " + scientist)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -96,7 +91,6 @@ class PromoteEndToEndTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("EVALUATED"));
 
-        // scientist cannot promote, the row stays EVALUATED
         mvc.perform(post("/api/v1/models/" + id + "/promote")
                         .header("Authorization", "Bearer " + scientist)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -106,7 +100,6 @@ class PromoteEndToEndTest {
                         .header("Authorization", "Bearer " + scientist))
                 .andExpect(jsonPath("$.status").value("EVALUATED"));
 
-        // lead can
         mvc.perform(post("/api/v1/models/" + id + "/promote")
                         .header("Authorization", "Bearer " + lead)
                         .contentType(MediaType.APPLICATION_JSON)

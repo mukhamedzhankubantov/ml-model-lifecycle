@@ -13,10 +13,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * The locked action: move a model to PRODUCTION. The URL rule and the method rule
- * name the same role, so a call that skips the web layer is still refused.
- */
 @Service
 public class ModelPromotionService {
     private static final Logger log = LoggerFactory.getLogger(ModelPromotionService.class);
@@ -34,7 +30,6 @@ public class ModelPromotionService {
     public ModelItem promote(ModelId id, String actor, double accuracy) {
         ModelItem item = models.findById(id).orElseThrow(() -> new ModelNotFound(id));
 
-        // Plain-Java policy: throws PolicyViolation, the row is not touched.
         policyAndRegistry.changeModelStatus(id, item.status(), ModelStatus.PRODUCTION, accuracy);
 
         if (!models.updateStatus(id, item.status(), ModelStatus.PRODUCTION)) {

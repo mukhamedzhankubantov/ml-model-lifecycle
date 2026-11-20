@@ -5,7 +5,6 @@ import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 
-/** Only the measured accuracy. Who promotes comes from the token, never from this body. */
 public record PromoteRequest(
         @Schema(description = "Measured accuracy of the model, 0 to 1", example = "0.91",
                 requiredMode = Schema.RequiredMode.REQUIRED)

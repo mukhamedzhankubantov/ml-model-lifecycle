@@ -19,10 +19,6 @@ public class AuthConfig {
         return PasswordEncoderFactories.createDelegatingPasswordEncoder();
     }
 
-    /**
-     * Checks the name and the BCrypt hash at login. Prod ships no users in this lab,
-     * so without a UserDetailsService every login is the same 401.
-     */
     @Bean
     public AuthenticationManager authenticationManager(ObjectProvider<UserDetailsService> users,
                                                        PasswordEncoder encoder) {

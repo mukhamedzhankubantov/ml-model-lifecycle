@@ -113,7 +113,6 @@ public class ModelController {
     public ModelResponse promote(@PathVariable UUID id,
                                  @Valid @RequestBody PromoteRequest request,
                                  Authentication authentication) {
-        // The actor is the authenticated name from the token, not a JSON field.
         return ModelResponse.from(
                 promotion.promote(new ModelId(id), authentication.getName(), request.accuracy()));
     }

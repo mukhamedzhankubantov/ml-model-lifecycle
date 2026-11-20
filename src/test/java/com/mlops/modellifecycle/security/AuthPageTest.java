@@ -14,7 +14,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.forwardedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** The page is served by this process, through the real filter chain, with no token. */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("dev")

@@ -16,32 +16,26 @@
   <circle cx="545" cy="55" r="70" fill="#ffffff" fill-opacity=".45"/>
   <circle cx="60" cy="330" r="90" fill="#ffffff" fill-opacity=".35"/>
 
-  <!-- pipeline line -->
   <path d="M100 118 H310 H520" stroke="#b197fc" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 10" fill="none"/>
 
-  <!-- three stage cards -->
   <g filter="url(#sh)">
     <rect x="42" y="64" width="116" height="108" rx="16" fill="#ffffff"/>
     <rect x="252" y="64" width="116" height="108" rx="16" fill="#ffffff"/>
     <rect x="462" y="64" width="116" height="108" rx="16" fill="#ffffff"/>
   </g>
 
-  <!-- draft -->
   <circle cx="100" cy="102" r="14" fill="#dee2e6"/>
   <rect x="62" y="128" width="76" height="8" rx="4" fill="#ced4da"/>
   <rect x="62" y="144" width="52" height="8" rx="4" fill="#e9ecef"/>
-  <!-- evaluated -->
   <circle cx="310" cy="102" r="14" fill="#ffd43b"/>
   <path d="M303 102 l5 5 l9 -10" stroke="#ffffff" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
   <rect x="272" y="128" width="76" height="8" rx="4" fill="#ffe8a3"/>
   <rect x="272" y="144" width="60" height="8" rx="4" fill="#fff3bf"/>
-  <!-- production -->
   <circle cx="520" cy="102" r="14" fill="#38d9a9"/>
   <path d="M514 108 l12 -12 M519 96 h7 v7" stroke="#ffffff" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
   <rect x="482" y="128" width="76" height="8" rx="4" fill="#96f2d7"/>
   <rect x="482" y="144" width="64" height="8" rx="4" fill="#c3fae8"/>
 
-  <!-- accuracy chart -->
   <g filter="url(#sh)">
     <rect x="42" y="204" width="536" height="138" rx="18" fill="#ffffff"/>
   </g>

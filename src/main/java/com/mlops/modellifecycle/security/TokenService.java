@@ -13,10 +13,6 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.List;
 
-/**
- * Signs the access token after a successful login.
- * The payload is readable by anyone, so it carries only iss, sub, iat, exp and roles.
- */
 @Service
 public class TokenService {
     private static final String ROLE_PREFIX = "ROLE_";
@@ -31,8 +27,6 @@ public class TokenService {
 
     public String issue(Authentication authentication) {
         Instant now = Instant.now();
-        // Only real roles go into the token. Spring Security 7 also puts FACTOR_PASSWORD
-        // on a password login; that says how the caller logged in, it is not a role.
         List<String> roles = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .filter(a -> a.startsWith(ROLE_PREFIX))

@@ -8,10 +8,6 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 
-/**
- * Two classroom users for the laptop. Passwords are stored as BCrypt hashes
- * (the delegating encoder writes the {bcrypt} prefix); this profile is not active in prod.
- */
 @Configuration
 @Profile("dev")
 public class DevUsersConfig {

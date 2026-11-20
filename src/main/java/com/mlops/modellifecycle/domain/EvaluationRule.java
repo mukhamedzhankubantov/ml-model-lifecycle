@@ -1,6 +1,5 @@
 package com.mlops.modellifecycle.domain;
 
-/** Only a DRAFT model can move to EVALUATED. */
 public class EvaluationRule implements ModelRule {
     @Override
     public void check(ModelStatus currentStatus, ModelStatus targetStatus, double accuracy) {

@@ -13,10 +13,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Moves a DRAFT model to EVALUATED. Both roles may do it, so the page can walk a model to
- * the point where the locked promote action makes sense.
- */
 @Service
 public class ModelEvaluationService {
     private static final Logger log = LoggerFactory.getLogger(ModelEvaluationService.class);
@@ -34,7 +30,6 @@ public class ModelEvaluationService {
     public ModelItem evaluate(ModelId id, String actor) {
         ModelItem item = models.findById(id).orElseThrow(() -> new ModelNotFound(id));
 
-        // Accuracy only matters for PRODUCTION; 0 is a placeholder for this move.
         policyAndRegistry.changeModelStatus(id, item.status(), ModelStatus.EVALUATED, 0.0);
 
         if (!models.updateStatus(id, item.status(), ModelStatus.EVALUATED)) {

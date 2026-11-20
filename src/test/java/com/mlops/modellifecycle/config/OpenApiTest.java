@@ -12,7 +12,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** The contract is read through the real filter chain, with no token, like a reader of Swagger UI. */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("dev")

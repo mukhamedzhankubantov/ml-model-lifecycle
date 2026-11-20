@@ -37,11 +37,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * One test per row of the README rules table. The real SecurityConfig is imported and the
- * filters are on; only the services and the JwtDecoder are mocks. jwt() supplies a fake
- * verified token with authorities; no jwt() means anonymous.
- */
 @WebMvcTest({ModelController.class, MeController.class})
 @Import(SecurityConfig.class)
 class SecurityRulesTest {
@@ -76,8 +71,6 @@ class SecurityRulesTest {
     private static String promotePath() {
         return MODELS + "/" + UUID.randomUUID() + "/promote";
     }
-
-    // ---- No token: 401 -------------------------------------------------------------
 
     @Test
     void readWithNoTokenIs401AndServiceIsNotCalled() throws Exception {
@@ -137,8 +130,6 @@ class SecurityRulesTest {
                 .andExpect(jsonPath("$.correlationId").value(matchesPattern("[0-9a-f-]{36}")));
     }
 
-    // ---- Locked action: junior 403, senior ok -------------------------------------
-
     @Test
     void juniorOnPromoteIs403AndServiceIsNotCalled() throws Exception {
         mvc.perform(post(promotePath())
@@ -181,8 +172,6 @@ class SecurityRulesTest {
 
         verify(promotion).promote(new ModelId(uuid), "lead", 0.91);
     }
-
-    // ---- Both roles: create, read, me ---------------------------------------------
 
     @Test
     void evaluateWithNoTokenIs401AndServiceIsNotCalled() throws Exception {
@@ -235,8 +224,6 @@ class SecurityRulesTest {
                 .andExpect(jsonPath("$.username").value("scientist"));
     }
 
-    // ---- Anything else: denyAll ---------------------------------------------------
-
     @Test
     void unknownUrlWithATokenIs403() throws Exception {
         mvc.perform(get("/admin").with(senior()))
@@ -257,8 +244,6 @@ class SecurityRulesTest {
 
         verifyNoInteractions(registration);
     }
-
-    // ---- Open rows: never 401 or 403 ----------------------------------------------
 
     @Test
     void pageAndSpringdocPathsAreOpenWithNoToken() throws Exception {

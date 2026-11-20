@@ -20,7 +20,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** Real filter chain, real dev users, real BCrypt: login and then use the token. */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("dev")
