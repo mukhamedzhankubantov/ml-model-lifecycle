@@ -58,10 +58,11 @@ Locked action: `promote` (moves a model to `PRODUCTION`).
 | --- | --- | --- | --- |
 | `POST /api/v1/auth/login` | anyone | anyone | allowed |
 | Create and read a model (`POST /api/v1/models`, `GET /api/v1/models/{id}`) | yes | yes | 401 |
+| Evaluate: `POST /api/v1/models/{id}/evaluate` (DRAFT to EVALUATED) | yes | yes | 401 |
 | Locked: `POST /api/v1/models/{id}/promote` | 403 | yes | 401 |
 | `GET /api/me` | yes | yes | 401 |
 | `GET /actuator/health` | anyone | anyone | allowed |
-| Auth page (`/`, its css and js) | anyone | anyone | allowed |
+| Auth page (`/`, `/index.html`, `/styles.css`, `/app.js`, `/img/**`) | anyone | anyone | allowed |
 | springdoc UI and `/v3/api-docs/**` | anyone | anyone | allowed |
 | Anything else | 403 | 403 | 401 |
 
@@ -69,3 +70,35 @@ Error bodies stay `code`, `message`, `correlationId`:
 - no or bad token: 401 `UNAUTHENTICATED`, `valid token required`
 - wrong role: 403 `FORBIDDEN`, `not allowed for your role`
 - wrong login: 401 `UNAUTHENTICATED`, `bad username or password`
+- the policy forbids a move (for example DRAFT to PRODUCTION): 409 `POLICY_VIOLATION`, the row does not change
+
+`/actuator/info`, `env`, `heapdump` and every other URL fall under "Anything else".
+
+### Login and token
+
+`POST /api/v1/auth/login` with `{"username","password"}` returns `accessToken`, `tokenType` (`Bearer`), `expiresIn` (`900`).
+The token is HS256, issuer `ml-model-lifecycle`, lifetime 15 minutes, claims `iss`, `sub`, `iat`, `exp`, `roles` (role names without `ROLE_`).
+Unknown user and wrong password give the same 401. Send the token as `Authorization: Bearer <token>`.
+
+### Secret and users
+
+- `app.jwt.secret` is at least 32 bytes. It is set in `application-dev.yaml` (classroom value) and `application-prod.yaml` (`${CSS_JWT_SECRET}`, no default). `application.yaml` has none, and `src/main/java` has no secret literal. A short secret fails at startup.
+- Dev users exist only on the `dev` profile (`InMemoryUserDetailsManager`, BCrypt hashes, no `{noop}`):
+
+| Username | Password | Role |
+| --- | --- | --- |
+| `scientist` | `scientist-dev` | `DATA_SCIENTIST` |
+| `lead` | `lead-dev` | `ML_LEAD` |
+
+### Locked action
+
+`POST /api/v1/models/{id}/promote` with `{"accuracy": 0.91}`. The actor is `Authentication.getName()`; an `actor` or `role` field in the body is ignored.
+The URL rule and `@PreAuthorize` on `ModelPromotionService` name the same role (`ML_LEAD`). A model must be `EVALUATED` with accuracy of at least 0.80.
+`POST /api/v1/models/{id}/evaluate` moves a `DRAFT` model to `EVALUATED` (both roles), so the page can reach a promotable model.
+
+### Auth page
+
+Run `mvn spring-boot:run` (profile `dev`) and open `http://localhost:8080/`. The page is served from `src/main/resources/static/`
+(`index.html`, `styles.css`, `app.js`, `img/`), has no external libraries, and keeps the token in a JavaScript variable only.
+Sign in as `scientist` and run Promote to see 403 and an unchanged status; log out, sign in as `lead` and promote to see `PRODUCTION`;
+log out and any call is 401. Swagger UI: `/swagger-ui.html`.
